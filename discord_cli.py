@@ -22,6 +22,7 @@ Usage:
     python discord_cli_simple.py pin_message <channel_id> <message_id>
     python discord_cli_simple.py unpin_message <channel_id> <message_id>
     python discord_cli_simple.py list_pins <channel_id>
+    python discord_cli_simple.py move_channel <channel_id> <category_id>
 """
 
 import asyncio
@@ -695,6 +696,42 @@ async def list_pins(channel_id: str):
     
     await bot.start(TOKEN)
 
+async def move_channel(channel_id: str, category_id: str):
+    """Move a channel to a different category."""
+    bot = commands.Bot(command_prefix='!', intents=intents)
+    
+    @bot.event
+    async def on_ready():
+        try:
+            channel = bot.get_channel(int(channel_id))
+            if channel is None:
+                print(f"Error: Channel {channel_id} not found")
+                await bot.close()
+                return
+            
+            category = bot.get_channel(int(category_id))
+            if category is None:
+                print(f"Error: Category {category_id} not found")
+                await bot.close()
+                return
+            
+            if category.type != discord.ChannelType.category:
+                print(f"Error: Channel {category_id} is not a category")
+                await bot.close()
+                return
+            
+            old_category = channel.category
+            old_name = channel.category.name if channel.category else "None"
+            await channel.edit(category=category)
+            print(f"Moved channel '{channel.name}' (ID: {channel_id}) from '{old_name}' to category '{category.name}'")
+        
+        except Exception as e:
+            print(f"Error: {e}")
+        finally:
+            await bot.close()
+    
+    await bot.start(TOKEN)
+
 def main():
     import sys
     if len(sys.argv) < 2:
@@ -718,6 +755,7 @@ def main():
         print("  python discord_cli_simple.py pin_message 1467357084843507782 1234567890123456789")
         print("  python discord_cli_simple.py unpin_message 1467357084843507782 1234567890123456789")
         print("  python discord_cli_simple.py list_pins 1467357084843507782")
+        print("  python discord_cli_simple.py move_channel 1467357084843507782 1467364905383628852")
         sys.exit(1)
     
     command = sys.argv[1]
@@ -872,6 +910,12 @@ def main():
                 print("Usage: python discord_cli_simple.py list_pins <channel_id>")
                 sys.exit(1)
             asyncio.run(list_pins(sys.argv[2]))
+        
+        elif command == "move_channel":
+            if len(sys.argv) != 4:
+                print("Usage: python discord_cli_simple.py move_channel <channel_id> <category_id>")
+                sys.exit(1)
+            asyncio.run(move_channel(sys.argv[2], sys.argv[3]))
         
         else:
             print(f"Unknown command: {command}")
