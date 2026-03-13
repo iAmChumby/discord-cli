@@ -19,6 +19,9 @@ Usage:
     python discord_cli_simple.py remove_role <guild_id> <user_id> <role_id>
     python discord_cli_simple.py user_info <guild_id> <user_id>
     python discord_cli_simple.py get_channel_id <guild_id> <channel_name>
+    python discord_cli_simple.py pin_message <channel_id> <message_id>
+    python discord_cli_simple.py unpin_message <channel_id> <message_id>
+    python discord_cli_simple.py list_pins <channel_id>
 """
 
 import asyncio
@@ -610,6 +613,88 @@ async def change_nickname(guild_id: str, user_id: str, nickname: str):
     
     await bot.start(TOKEN)
 
+async def pin_message(channel_id: str, message_id: str):
+    """Pin a message in a channel."""
+    bot = commands.Bot(command_prefix='!', intents=intents)
+    
+    @bot.event
+    async def on_ready():
+        try:
+            channel = bot.get_channel(int(channel_id))
+            if channel is None:
+                print(f"Error: Channel {channel_id} not found")
+                await bot.close()
+                return
+            
+            message = await channel.fetch_message(int(message_id))
+            await message.pin()
+            print(f"Pinned message {message_id} in channel {channel_id}")
+        
+        except Exception as e:
+            print(f"Error: {e}")
+        finally:
+            await bot.close()
+    
+    await bot.start(TOKEN)
+
+async def unpin_message(channel_id: str, message_id: str):
+    """Unpin a message from a channel."""
+    bot = commands.Bot(command_prefix='!', intents=intents)
+    
+    @bot.event
+    async def on_ready():
+        try:
+            channel = bot.get_channel(int(channel_id))
+            if channel is None:
+                print(f"Error: Channel {channel_id} not found")
+                await bot.close()
+                return
+            
+            message = await channel.fetch_message(int(message_id))
+            await message.unpin()
+            print(f"Unpinned message {message_id} from channel {channel_id}")
+        
+        except Exception as e:
+            print(f"Error: {e}")
+        finally:
+            await bot.close()
+    
+    await bot.start(TOKEN)
+
+async def list_pins(channel_id: str):
+    """List pinned messages in a channel."""
+    bot = commands.Bot(command_prefix='!', intents=intents)
+    
+    @bot.event
+    async def on_ready():
+        try:
+            channel = bot.get_channel(int(channel_id))
+            if channel is None:
+                print(f"Error: Channel {channel_id} not found")
+                await bot.close()
+                return
+            
+            pins = await channel.pins()
+            if not pins:
+                print(f"No pinned messages in channel {channel_id}")
+                await bot.close()
+                return
+            
+            print(f"Pinned messages in channel {channel_id}:")
+            for pin in pins:
+                author = f"{pin.author.name}#{pin.author.discriminator}"
+                preview = pin.content[:100] + "..." if len(pin.content) > 100 else pin.content
+                if not preview.strip():
+                    preview = "[Embed/Attachment]"
+                print(f"  - ID: {pin.id}, Author: {author}, Content: {preview}")
+        
+        except Exception as e:
+            print(f"Error: {e}")
+        finally:
+            await bot.close()
+    
+    await bot.start(TOKEN)
+
 def main():
     import sys
     if len(sys.argv) < 2:
@@ -630,6 +715,9 @@ def main():
         print("  python discord_cli_simple.py remove_role 1467329846265909446 659118969445416961 1467364553154236500")
         print("  python discord_cli_simple.py user_info 1467329846265909446 659118969445416961")
         print("  python discord_cli_simple.py get_channel_id 1467329846265909446 general")
+        print("  python discord_cli_simple.py pin_message 1467357084843507782 1234567890123456789")
+        print("  python discord_cli_simple.py unpin_message 1467357084843507782 1234567890123456789")
+        print("  python discord_cli_simple.py list_pins 1467357084843507782")
         sys.exit(1)
     
     command = sys.argv[1]
@@ -766,6 +854,24 @@ def main():
                 print("Usage: python discord_cli_simple.py get_channel_id <guild_id> <channel_name>")
                 sys.exit(1)
             asyncio.run(get_channel_id(sys.argv[2], sys.argv[3]))
+        
+        elif command == "pin_message":
+            if len(sys.argv) != 4:
+                print("Usage: python discord_cli_simple.py pin_message <channel_id> <message_id>")
+                sys.exit(1)
+            asyncio.run(pin_message(sys.argv[2], sys.argv[3]))
+        
+        elif command == "unpin_message":
+            if len(sys.argv) != 4:
+                print("Usage: python discord_cli_simple.py unpin_message <channel_id> <message_id>")
+                sys.exit(1)
+            asyncio.run(unpin_message(sys.argv[2], sys.argv[3]))
+        
+        elif command == "list_pins":
+            if len(sys.argv) != 3:
+                print("Usage: python discord_cli_simple.py list_pins <channel_id>")
+                sys.exit(1)
+            asyncio.run(list_pins(sys.argv[2]))
         
         else:
             print(f"Unknown command: {command}")
