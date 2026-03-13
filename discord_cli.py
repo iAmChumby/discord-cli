@@ -23,6 +23,7 @@ Usage:
     python discord_cli_simple.py unpin_message <channel_id> <message_id>
     python discord_cli_simple.py list_pins <channel_id>
     python discord_cli_simple.py move_channel <channel_id> <category_id>
+    python discord_cli_simple.py bulk_send <channel_id1> <channel_id2> ... '<message>'
 """
 
 import asyncio
@@ -732,6 +733,37 @@ async def move_channel(channel_id: str, category_id: str):
     
     await bot.start(TOKEN)
 
+async def bulk_send(channel_ids: list[str], content: str):
+    """Send the same message to multiple channels."""
+    bot = commands.Bot(command_prefix='!', intents=intents)
+    
+    @bot.event
+    async def on_ready():
+        success = 0
+        failures = []
+        for chan_id in channel_ids:
+            try:
+                channel = bot.get_channel(int(chan_id))
+                if channel is None:
+                    failures.append(f"Channel {chan_id} not found")
+                    continue
+                
+                await channel.send(content)
+                success += 1
+                print(f"Sent to channel {chan_id}: {content[:50]}...")
+            except Exception as e:
+                failures.append(f"Channel {chan_id}: {str(e)}")
+        
+        print(f"\nBulk send complete: {success} succeeded, {len(failures)} failed")
+        if failures:
+            print("\nFailures:")
+            for f in failures:
+                print(f"  - {f}")
+        
+        await bot.close()
+    
+    await bot.start(TOKEN)
+
 def main():
     import sys
     if len(sys.argv) < 2:
@@ -756,6 +788,7 @@ def main():
         print("  python discord_cli_simple.py unpin_message 1467357084843507782 1234567890123456789")
         print("  python discord_cli_simple.py list_pins 1467357084843507782")
         print("  python discord_cli_simple.py move_channel 1467357084843507782 1467364905383628852")
+        print("  python discord_cli_simple.py bulk_send 1482033249558466641 1482033250930262088 1482033252171649184 'Welcome!'")
         sys.exit(1)
     
     command = sys.argv[1]
@@ -916,6 +949,15 @@ def main():
                 print("Usage: python discord_cli_simple.py move_channel <channel_id> <category_id>")
                 sys.exit(1)
             asyncio.run(move_channel(sys.argv[2], sys.argv[3]))
+        
+        elif command == "bulk_send":
+            if len(sys.argv) < 4:
+                print("Usage: python discord_cli_simple.py bulk_send <channel_id1> <channel_id2> ... <channel_idN> '<message>'")
+                print("Example: python discord_cli_simple.py bulk_send 123 456 789 'Hello world'")
+                sys.exit(1)
+            channel_ids = sys.argv[2:-1]
+            content = sys.argv[-1]
+            asyncio.run(bulk_send(channel_ids, content))
         
         else:
             print(f"Unknown command: {command}")
